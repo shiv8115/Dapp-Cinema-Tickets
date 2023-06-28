@@ -6,6 +6,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+/**
+ * @title DappCinemas
+ * @dev A smart contract for movie management, showtime scheduling, ticket booking, and revenue tracking.
+ */
 contract DappCinemas is Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _totalMovies;
@@ -33,6 +37,7 @@ contract DappCinemas is Ownable {
         bool refunded;
     }
 
+    // Structure representing a time slot for a movie
     struct TimeSlotStruct {
         uint256 id;
         uint256 movieId;
@@ -50,11 +55,21 @@ contract DappCinemas is Ownable {
     event Action(string actionType);
 
     uint256 public balance;
+    // Mapping to store the existence of movies
     mapping(uint256 => bool) movieExists;
     mapping(uint256 => MovieStruct) movies;
+    // Mapping to store movie time slots
     mapping(uint256 => TimeSlotStruct) movieTimeSlot;
+    // Mapping to store ticket holders for each time slot
     mapping(uint256 => mapping(uint256 => address[])) ticketHolder;
 
+    /**
+     * @dev Adds a new movie to the system.
+     * @param name The name of the movie.
+     * @param imageUrl The URL of the movie's image.
+     * @param genre The genre of the movie.
+     * @param description A brief description of the movie.
+     */
     function addMovie(
         string memory name,
         string memory imageUrl,
@@ -82,6 +97,14 @@ contract DappCinemas is Ownable {
         emit Action("Movie added successfully");
     }
 
+    /**
+     * @dev Updates an existing movie in the system.
+     * @param movieId The ID of the movie to be updated.
+     * @param name The updated name of the movie.
+     * @param imageUrl The updated URL of the movie's image.
+     * @param genre The updated genre of the movie.
+     * @param description The updated description of the movie.
+     */
     function updateMovie(
         uint256 movieId,
         string memory name,
@@ -111,6 +134,10 @@ contract DappCinemas is Ownable {
         emit Action("Movie updated successfully");
     }
 
+    /**
+     * @dev Deletes a movie from the system.
+     * @param movieId The ID of the movie to be deleted.
+     */
     function deleteMovie(uint256 movieId) public onlyOwner {
         require(movieExists[movieId], "Movie doesn't exist!");
 
@@ -126,6 +153,10 @@ contract DappCinemas is Ownable {
         movieExists[movieId] = false;
     }
 
+    /**
+     * @dev Retrieves all available movies in the system.
+     * @return Movies An array of MovieStruct representing the available movies.
+     */
     function getMovies() public view returns (MovieStruct[] memory Movies) {
         uint256 totalMovies;
         for (uint256 i = 1; i <= _totalMovies.current(); i++) {
@@ -143,10 +174,24 @@ contract DappCinemas is Ownable {
         }
     }
 
+    /**
+     * @dev Retrieves the details of a specific movie.
+     * @param id The ID of the movie.
+     * @return MovieStruct The MovieStruct representing the movie with the given ID.
+     */
     function getMovie(uint256 id) public view returns (MovieStruct memory) {
         return movies[id];
     }
 
+    /**
+     * @dev Adds multiple timeslots for a movie.
+     * @param movieId The ID of the movie.
+     * @param ticketCosts An array of ticket costs for each timeslot.
+     * @param startTimes An array of start times for each timeslot.
+     * @param endTimes An array of end times for each timeslot.
+     * @param capacities An array of capacities (seats available) for each timeslot.
+     * @param viewingDays An array of viewing days for each timeslot.
+     */
     function addTimeslot(
         uint256 movieId,
         uint256[] memory ticketCosts,
@@ -186,6 +231,11 @@ contract DappCinemas is Ownable {
         }
     }
 
+    /**
+     * @dev Deletes a time slot for a movie
+     * @param movieId The ID of the movie
+     * @param slotId The ID of the time slot
+     */
     function deleteTimeSlot(uint256 movieId, uint256 slotId) public onlyOwner {
         require(
             movieExists[movieId] && movieTimeSlot[slotId].movieId == movieId,
@@ -209,6 +259,11 @@ contract DappCinemas is Ownable {
         delete ticketHolder[movieId][slotId];
     }
 
+    /**
+     * @dev Marks a time slot as completed
+     * @param movieId The ID of the movie
+     * @param slotId The ID of the time slot
+     */
     function markTimeSlot(uint256 movieId, uint256 slotId) public onlyOwner {
         require(
             movieExists[movieId] && movieTimeSlot[slotId].movieId == movieId,
@@ -221,6 +276,11 @@ contract DappCinemas is Ownable {
         movieTimeSlot[slotId].balance = 0;
     }
 
+    /**
+     * @dev Returns an array of movie time slots for a given day.
+     * @param day The day for which to retrieve the time slots.
+     * @return MovieSlots An array of TimeSlotStruct representing the available movie time slots.
+     */
     function getTimeSlotsByDay(
         uint256 day
     ) public view returns (TimeSlotStruct[] memory MovieSlots) {
@@ -246,12 +306,22 @@ contract DappCinemas is Ownable {
         }
     }
 
+    /**
+     * @dev Returns the details of a specific movie time slot.
+     * @param slotId The ID of the movie time slot to retrieve.
+     * @return TimeSlotStruct The TimeSlotStruct representing the details of the movie time slot.
+     */
     function getTimeSlot(
         uint256 slotId
     ) public view returns (TimeSlotStruct memory) {
         return movieTimeSlot[slotId];
     }
 
+    /**
+     * @dev Returns an array of movie time slots for a given movie ID.
+     * @param movieId The ID of the movie for which to retrieve the time slots.
+     * @return MovieSlots An array of TimeSlotStruct representing the available movie time slots.
+     */
     function getTimeSlots(
         uint256 movieId
     ) public view returns (TimeSlotStruct[] memory MovieSlots) {
@@ -278,6 +348,12 @@ contract DappCinemas is Ownable {
         }
     }
 
+    /**
+     * @dev Allows the user to buy movie tickets for a specific movie time slot.
+     * @param movieId The ID of the movie for which the ticket is being purchased.
+     * @param slotId The ID of the movie time slot for which the ticket is being purchased.
+     * @param tickets The number of tickets to purchase.
+     */
     function buyTicket(
         uint256 movieId,
         uint256 slotId,
@@ -329,11 +405,20 @@ contract DappCinemas is Ownable {
         payTo(to, amount);
     }
 
+    /**
+     * @dev Internal function to transfer funds to a given address.
+     * @param to The address to which the funds will be transferred.
+     * @param amount The amount of funds to transfer.
+     */
     function payTo(address to, uint256 amount) internal {
         (bool success, ) = payable(to).call{value: amount}("");
         require(success);
     }
 
+    /**
+     * @dev Internal function to get the current timestamp.
+     * @return The current timestamp in milliseconds.
+     */
     function currentTime() internal view returns (uint256) {
         uint256 newNum = (block.timestamp * 1000) + 1000;
         return newNum;
